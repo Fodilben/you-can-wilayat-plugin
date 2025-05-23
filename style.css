@@ -43,6 +43,11 @@
   font-size: inherit;
 }
 
+/* Hide the original region input */
+input[name="region"].wilaya-converted {
+  display: none !important;
+}
+
 .wilaya-required {
   color: #e74c3c;
   margin-left: 3px;

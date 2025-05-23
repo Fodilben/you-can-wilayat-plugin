@@ -72,13 +72,9 @@
   // Configuration
   const config = {
     formSelector: '#express-checkout-form, form[class*="checkout"], form.checkout-form', // Target form selector
-    insertAfterSelector: 'input[name="region"], .form-group.is-required:has(input[name="region"])', // Insert after region field
-    fieldName: "city", // Name of the field for form submission (using city field for wilaya)
-    labelText: 'الولاية', // Label text in Arabic
-    placeholderText: 'اختر الولاية', // Placeholder text in Arabic
+    regionInputSelector: 'input[name="region"]', // Target the existing region input field
+    fieldName: "region", // Use the existing region field
     requiredField: true, // Whether the field is required
-    formGroupClass: 'form-group is-required', // Class for form group to match store styling
-    labelClass: 'form-label', // Class for label to match store styling
   };
 
   // Initialize the plugin when the DOM is fully loaded
@@ -110,7 +106,7 @@
         for (const selector of alternativeSelectors) {
           const alternativeForm = document.querySelector(selector);
           if (alternativeForm) {
-            injectWilayaDropdown(alternativeForm);
+            convertRegionToWilayaDropdown(alternativeForm);
             return;
           }
         }
@@ -120,36 +116,33 @@
       return;
     }
     
-    // If form exists, inject the dropdown
-    injectWilayaDropdown(form);
+    // If form exists, convert the region field
+    convertRegionToWilayaDropdown(form);
   }
 
-  // Function to inject the wilaya dropdown into the form
-  function injectWilayaDropdown(form) {
-    // Check if the dropdown is already injected
-    if (form.querySelector('.wilaya-select')) {
+  // Function to convert the region input to a wilaya dropdown
+  function convertRegionToWilayaDropdown(form) {
+    // Find the region input field
+    const regionInput = form.querySelector(config.regionInputSelector);
+    if (!regionInput) {
+      console.error('YouCan Wilaya Plugin: Could not find the region input field.');
       return;
     }
     
-    // Find the region field to insert after
-    const regionField = form.querySelector(config.insertAfterSelector);
-    if (!regionField) {
-      console.error('YouCan Wilaya Plugin: Could not find the region field to insert after.');
+    // Check if we've already converted this field
+    if (regionInput.classList.contains('wilaya-converted')) {
       return;
     }
     
-    // Find the parent form-group of the region field
-    const regionFormGroup = regionField.closest('.form-group') || regionField;
+    // Get the parent form-group of the region field
+    const regionFormGroup = regionInput.closest('.form-group') || regionInput.parentNode;
+    if (!regionFormGroup) {
+      console.error('YouCan Wilaya Plugin: Could not find the region form group.');
+      return;
+    }
     
-    // Create container for the wilaya field (form-group)
-    const container = document.createElement('div');
-    container.className = config.formGroupClass;
-    
-    // Create label
-    const label = document.createElement('label');
-    label.className = config.labelClass;
-    label.setAttribute('for', 'wilaya-select');
-    label.textContent = config.labelText;
+    // Get the existing label if it exists
+    const existingLabel = regionFormGroup.querySelector('label');
     
     // Create select element
     const select = document.createElement('select');
@@ -164,7 +157,7 @@
     // Add placeholder option
     const placeholderOption = document.createElement('option');
     placeholderOption.value = '';
-    placeholderOption.textContent = config.placeholderText;
+    placeholderOption.textContent = 'اختر الولاية';
     placeholderOption.selected = true;
     placeholderOption.disabled = true;
     select.appendChild(placeholderOption);
@@ -172,34 +165,35 @@
     // Add wilaya options
     wilayasData.forEach(function(wilaya) {
       const option = document.createElement('option');
-      option.value = wilaya.name;  // Use name as value since it's being used for city field
+      option.value = wilaya.name;  // Use name as value
       option.textContent = wilaya.arabic_name + ' (' + wilaya.code + ')';
       option.setAttribute('data-code', wilaya.code);
       select.appendChild(option);
     });
     
-    // Append elements to container
-    container.appendChild(label);
-    container.appendChild(select);
+    // Replace the input with the select
+    regionInput.style.display = 'none';
+    regionInput.classList.add('wilaya-converted');
+    regionInput.parentNode.insertBefore(select, regionInput);
     
-    // Insert after the region field's form-group
-    regionFormGroup.parentNode.insertBefore(container, regionFormGroup.nextSibling);
-    
-    // Hide the original city field if it exists
-    const originalCityField = form.querySelector('input[name="city"]');
-    if (originalCityField) {
-      const originalCityGroup = originalCityField.closest('.form-group');
-      if (originalCityGroup) {
-        originalCityGroup.style.display = 'none';
-      } else {
-        originalCityField.style.display = 'none';
-      }
+    // Update the label text if needed
+    if (existingLabel) {
+      existingLabel.textContent = 'الولاية';
     }
+    
+    // Sync the values between the select and the hidden input
+    select.addEventListener('change', function() {
+      regionInput.value = this.value;
+      
+      // Trigger change event on the original input to ensure validation works
+      const event = new Event('change', { bubbles: true });
+      regionInput.dispatchEvent(event);
+    });
     
     // Inject CSS if it's not already injected
     injectCSS();
     
-    console.log('YouCan Wilaya Plugin: Wilaya dropdown successfully injected.');
+    console.log('YouCan Wilaya Plugin: Region input successfully converted to wilaya dropdown.');
   }
 
   // Function to inject CSS

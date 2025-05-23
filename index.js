@@ -5,26 +5,27 @@
 
 // Import wilayas if in a module environment, otherwise assume it's loaded in the global scope
 let wilayasData;
-if (typeof require !== 'undefined') {
-  wilayasData = require('./wilayas.js');
+if (typeof require !== "undefined") {
+  wilayasData = require("./wilayas.js");
 } else {
   wilayasData = window.wilayas || [];
 }
 
-(function() {
+(function () {
   // Configuration
   const config = {
-    formSelector: '#express-checkout-form, form[class*="checkout"], form.checkout-form', // Target form selector
+    formSelector:
+      '#express-checkout-form, form[class*="checkout"], form.checkout-form', // Target form selector
     regionInputSelector: 'input[name="region"]', // Target the existing region input field
     fieldName: "region", // Use the existing region field
     requiredField: true, // Whether the field is required
   };
 
   // Initialize the plugin when the DOM is fully loaded
-  document.addEventListener('DOMContentLoaded', initWilayaDropdown);
+  document.addEventListener("DOMContentLoaded", initWilayaDropdown);
 
   // Also try to initialize on page load in case DOMContentLoaded already fired
-  window.addEventListener('load', function() {
+  window.addEventListener("load", function () {
     // Small delay to ensure all YouCan scripts have loaded
     setTimeout(initWilayaDropdown, 500);
   });
@@ -33,19 +34,21 @@ if (typeof require !== 'undefined') {
   function initWilayaDropdown() {
     // Find the target form
     const form = document.querySelector(config.formSelector);
-    
+
     // If form doesn't exist, try again later or with different selectors
     if (!form) {
-      console.log('YouCan Wilaya Plugin: Form not found. Retrying in 1 second...');
-      setTimeout(function() {
+      console.log(
+        "YouCan Wilaya Plugin: Form not found. Retrying in 1 second..."
+      );
+      setTimeout(function () {
         const alternativeSelectors = [
-          '#express-checkout-form',
-          'form.checkout-form',
-          'form.checkout',
+          "#express-checkout-form",
+          "form.checkout-form",
+          "form.checkout",
           'form[action*="checkout"]',
-          'form[class*="checkout"]'
+          'form[class*="checkout"]',
         ];
-        
+
         for (const selector of alternativeSelectors) {
           const alternativeForm = document.querySelector(selector);
           if (alternativeForm) {
@@ -53,12 +56,14 @@ if (typeof require !== 'undefined') {
             return;
           }
         }
-        
-        console.error('YouCan Wilaya Plugin: Could not find a suitable form to inject the wilaya dropdown.');
+
+        console.error(
+          "YouCan Wilaya Plugin: Could not find a suitable form to inject the wilaya dropdown."
+        );
       }, 1000);
       return;
     }
-    
+
     // If form exists, convert the region field
     convertRegionToWilayaDropdown(form);
   }
@@ -68,94 +73,101 @@ if (typeof require !== 'undefined') {
     // Find the region input field
     const regionInput = form.querySelector(config.regionInputSelector);
     if (!regionInput) {
-      console.error('YouCan Wilaya Plugin: Could not find the region input field.');
+      console.error(
+        "YouCan Wilaya Plugin: Could not find the region input field."
+      );
       return;
     }
-    
+
     // Check if we've already converted this field
-    if (regionInput.classList.contains('wilaya-converted')) {
+    if (regionInput.classList.contains("wilaya-converted")) {
       return;
     }
-    
+
     // Get the parent form-group of the region field
-    const regionFormGroup = regionInput.closest('.form-group') || regionInput.parentNode;
+    const regionFormGroup =
+      regionInput.closest(".form-group") || regionInput.parentNode;
     if (!regionFormGroup) {
-      console.error('YouCan Wilaya Plugin: Could not find the region form group.');
+      console.error(
+        "YouCan Wilaya Plugin: Could not find the region form group."
+      );
       return;
     }
-    
+
     // Get the existing label if it exists
-    const existingLabel = regionFormGroup.querySelector('label');
-    
+    const existingLabel = regionFormGroup.querySelector("label");
+
     // Create select element
-    const select = document.createElement('select');
-    select.className = 'wilaya-select';
-    select.id = 'wilaya-select';
+    const select = document.createElement("select");
+    select.className = "wilaya-select";
+    select.id = "wilaya-select";
     select.name = config.fieldName;
-    
+
     if (config.requiredField) {
-      select.setAttribute('required', 'required');
+      select.setAttribute("required", "required");
     }
-    
+
     // Add placeholder option
-    const placeholderOption = document.createElement('option');
-    placeholderOption.value = '';
-    placeholderOption.textContent = 'اختر الولاية';
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent = "اختر الولاية";
     placeholderOption.selected = true;
     placeholderOption.disabled = true;
     select.appendChild(placeholderOption);
-    
+
     // Add wilaya options
-    wilayasData.forEach(function(wilaya) {
-      const option = document.createElement('option');
-      option.value = wilaya.name;  // Use name as value
-      option.textContent = wilaya.arabic_name + ' (' + wilaya.code + ')';
-      option.setAttribute('data-code', wilaya.code);
+    wilayasData.forEach(function (wilaya) {
+      const option = document.createElement("option");
+      option.value = wilaya.name; // Use name as value
+      option.textContent = wilaya.arabic_name + " (" + wilaya.code + ")";
+      option.setAttribute("data-code", wilaya.code);
       select.appendChild(option);
     });
-    
+
     // Replace the input with the select
-    regionInput.style.display = 'none';
-    regionInput.classList.add('wilaya-converted');
+    regionInput.style.display = "none";
+    regionInput.classList.add("wilaya-converted");
     regionInput.parentNode.insertBefore(select, regionInput);
-    
+
     // Update the label text if needed
     if (existingLabel) {
-      existingLabel.textContent = 'الولاية';
+      existingLabel.textContent = "الولاية";
     }
-    
+
     // Sync the values between the select and the hidden input
-    select.addEventListener('change', function() {
+    select.addEventListener("change", function () {
       regionInput.value = this.value;
-      
+
       // Trigger change event on the original input to ensure validation works
-      const event = new Event('change', { bubbles: true });
+      const event = new Event("change", { bubbles: true });
       regionInput.dispatchEvent(event);
     });
-    
+
     // Inject CSS if it's not already injected
     injectCSS();
-    
-    console.log('YouCan Wilaya Plugin: Region input successfully converted to wilaya dropdown.');
+
+    console.log(
+      "YouCan Wilaya Plugin: Region input successfully converted to wilaya dropdown."
+    );
   }
 
   // Function to inject CSS
   function injectCSS() {
     // Check if the CSS is already injected
-    if (document.getElementById('wilaya-plugin-css')) {
+    if (document.getElementById("wilaya-plugin-css")) {
       return;
     }
-    
+
     // Try to load the external CSS file
-    const link = document.createElement('link');
-    link.id = 'wilaya-plugin-css';
-    link.rel = 'stylesheet';
-    link.href = 'style.css';
-    
+    const link = document.createElement("link");
+    link.id = "wilaya-plugin-css";
+    link.rel = "stylesheet";
+    link.href = "style.css";
+
     // Fallback to inline CSS if the external file fails to load
-    link.onerror = function() {
-      const style = document.createElement('style');
-      style.id = 'wilaya-plugin-css';
+    link.onerror = function () {
+      const style = document.createElement("style");
+      style.id = "wilaya-plugin-css";
       style.textContent = `
         .wilaya-select { 
           width: 100%; 
@@ -206,7 +218,7 @@ if (typeof require !== 'undefined') {
       `;
       document.head.appendChild(style);
     };
-    
+
     document.head.appendChild(link);
   }
-})(); 
+})();
